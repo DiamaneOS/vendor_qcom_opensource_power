@@ -1,5 +1,30 @@
+// Copyright 2026 The DiamaneOS Project
+// SPDX-License-Identifier: BSD-3-Clause-Clear
+package {
+    default_applicable_licenses: ["qti_powerhal_license"],
+}
+license {
+    name: "qti_powerhal_license",
+    visibility: [":__subpackages__"],
+    license_kinds: ["SPDX-license-identifier-BSD-3-Clause", "SPDX-license-identifier-BSD-3-Clause-Clear"],
+    license_text: ["NOTICE", "LICENSES/BSD-3-Clause-Clear.txt", "LICENSES/consumed-source-notices.txt"],
+}
+// Volcano uses the common AIDL service; no legacy SoC implementation is selected.
 cc_library_headers {
     name: "qti_powerhal_headers",
     vendor_available: true,
     export_include_dirs: ["."],
+}
+cc_binary {
+    name: "android.hardware.power-service",
+    vendor: true,
+    relative_install_path: "hw",
+    init_rc: ["android.hardware.power-service.rc"],
+    vintf_fragments: ["power.xml"],
+    srcs: ["power-common.c", "metadata-parser.c", "utils.c", "list.c",
+           "hint-data.c", "powerhintparser.c", "Power.cpp", "main.cpp", "PowerHintSession.cpp"],
+    shared_libs: ["liblog", "libcutils", "libdl", "libxml2", "libbase",
+                  "libutils", "libbinder_ndk", "android.hardware.power-V4-ndk"],
+    header_libs: ["libutils_headers", "libhardware_headers"],
+    cflags: ["-Wno-unused-parameter", "-Wno-unused-variable"],
 }
