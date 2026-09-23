@@ -170,18 +170,20 @@ ndk::ScopedAStatus PowerHintSessionImpl::reportActualWorkDuration(const std::vec
 ndk::ScopedAStatus PowerHintSessionImpl::pause(){
     LOG(INFO) << "PowerHintSessionImpl::pause ";
     if(isSessionAlive(this)) {
-        setSessionActivity(this, false);
-        sendHint(aidl::android::hardware::power::SessionHint::CPU_LOAD_RESET);
+        // Release while still active: an inactive session can no longer drop its boost.
+        resetBoost();
         removePipelining();
+        setSessionActivity(this, false);
     }
     return ndk::ScopedAStatus::ok();
 }
 ndk::ScopedAStatus PowerHintSessionImpl::resume(){
     LOG(INFO) << "PowerHintSessionImpl::resume ";
     if(isSessionAlive(this)) {
+        // Activate first so the resume hint can restore the boost level held before pause.
+        setSessionActivity(this, true);
         sendHint(aidl::android::hardware::power::SessionHint::CPU_LOAD_RESUME);
         resumeThreadPipelining();
-        setSessionActivity(this, true);
     }
     return ndk::ScopedAStatus::ok();
 }
@@ -189,7 +191,7 @@ ndk::ScopedAStatus PowerHintSessionImpl::close(){
     LOG(INFO) << "PowerHintSessionImpl::close ";
 
     if(isSessionAlive(this)) {
-        sendHint(aidl::android::hardware::power::SessionHint::CPU_LOAD_RESET);
+        resetBoost();
         removePipelining();
         mThreadIds.clear();
 
@@ -201,8 +203,9 @@ ndk::ScopedAStatus PowerHintSessionImpl::close(){
 }
 ndk::ScopedAStatus PowerHintSessionImpl::sendHint(aidl::android::hardware::power::SessionHint hint){
     LOG(INFO) << "PowerHintSessionImpl::sendHint ";
+    // Hints for a paused session are ignored; its boost was released on pause.
     if(!isSessionActive(this))
-        return ndk::ScopedAStatus::fromExceptionCode(EX_ILLEGAL_STATE);
+        return ndk::ScopedAStatus::ok();
     switch(hint)
     {
         case aidl::android::hardware::power::SessionHint::CPU_LOAD_UP:
